@@ -1,4 +1,5 @@
-import { App, ItemView, MarkdownView, Menu, Modal, Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian';
+// main.ts
+import { App, ItemView, MarkdownView, Menu, Modal, Notice, Plugin, WorkspaceLeaf } from 'obsidian';
 import { DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab } from "./settings";
 
 export const CODE_VIEWER_VIEW_TYPE = 'pharos-code-viewer';
@@ -37,6 +38,8 @@ export class CodeViewerView extends ItemView {
 			.pharos-toolbar button { font-size:12px; padding:3px 8px; border-radius:4px; cursor:pointer; background:var(--interactive-accent); color:var(--text-on-accent); border:none; }
 			.pharos-body { display:flex; flex:1; overflow:hidden; }
 			.pharos-tab-content { display:flex; flex:1; overflow:hidden; flex-direction:column; }
+
+			/* 파일 트리 탭 */
 			.pharos-file-tree { width:200px; min-width:140px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-file-tree-header { font-size:11px; font-weight:600; color:var(--text-muted); padding:8px 10px 4px; text-transform:uppercase; }
 			.pharos-file-item { display:flex; align-items:center; gap:5px; padding:4px 10px; font-size:12px; cursor:pointer; border-left:2px solid transparent; }
@@ -44,11 +47,15 @@ export class CodeViewerView extends ItemView {
 			.pharos-file-item.recent { border-left-color:#f59e0b; }
 			.pharos-recent-badge { font-size:9px; background:#f59e0b; color:white; padding:1px 4px; border-radius:3px; margin-left:4px; }
 			.pharos-private-badge { font-size:9px; background:#6366f1; color:white; padding:1px 5px; border-radius:3px; margin-left:6px; }
+
+			/* 코드 패널 */
 			.pharos-code-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 			.pharos-code-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--background-secondary); border-bottom:1px solid var(--background-modifier-border); font-size:12px; flex-shrink:0; }
 			.pharos-code-scroll { flex:1; overflow:auto; background:var(--background-primary); }
 			.pharos-code-scroll pre { margin:0; padding:16px; font-size:12px; line-height:1.6; font-family:var(--font-monospace); white-space:pre; }
 			.pharos-copy-btn { font-size:11px; padding:2px 8px; border-radius:3px; cursor:pointer; background:var(--background-modifier-border); color:var(--text-normal); border:none; }
+
+			/* 팀원 탭 */
 			.pharos-member-list { width:200px; min-width:160px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-member-item { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; border-left:3px solid transparent; font-size:13px; }
 			.pharos-member-item:hover { background:var(--background-modifier-hover); }
@@ -57,6 +64,7 @@ export class CodeViewerView extends ItemView {
 			.pharos-member-info { flex:1; min-width:0; }
 			.pharos-member-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 			.pharos-member-commits { font-size:10px; color:var(--text-muted); }
+
 			.pharos-commit-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 			.pharos-commit-list { width:260px; min-width:200px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; flex-shrink:0; }
 			.pharos-commit-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--background-modifier-border); border-left:3px solid transparent; }
@@ -65,6 +73,7 @@ export class CodeViewerView extends ItemView {
 			.pharos-commit-msg { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 			.pharos-commit-date { font-size:10px; color:var(--text-muted); margin-top:2px; }
 			.pharos-commit-sha { font-size:10px; color:var(--text-muted); font-family:var(--font-monospace); }
+
 			.pharos-file-change-list { width:200px; min-width:160px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-file-change-item { padding:6px 10px; cursor:pointer; border-left:3px solid transparent; font-size:11px; }
 			.pharos-file-change-item:hover { background:var(--background-modifier-hover); }
@@ -73,6 +82,7 @@ export class CodeViewerView extends ItemView {
 			.pharos-file-change-stat { font-size:10px; color:var(--text-muted); }
 			.pharos-stat-add { color:#22c55e; }
 			.pharos-stat-del { color:#ef4444; }
+
 			.pharos-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); gap:8px; }
 			.pharos-placeholder .ph-icon { font-size:28px; }
 			.pharos-placeholder .ph-text { font-size:12px; }
@@ -80,6 +90,7 @@ export class CodeViewerView extends ItemView {
 			.pharos-section-header { font-size:11px; font-weight:600; color:var(--text-muted); padding:8px 10px 4px; text-transform:uppercase; border-bottom:1px solid var(--background-modifier-border); }
 		`;
 
+		// ── 탭 바 ──────────────────────────
 		const tabBar = container.createDiv({ cls: 'pharos-tabs' });
 		const tabContent = container.createDiv({ cls: 'pharos-tab-content' });
 
@@ -88,7 +99,10 @@ export class CodeViewerView extends ItemView {
 			{ id: 'members', label: '👥 팀원별 커밋' },
 		];
 
+		let activeTabId = 'files';
+
 		const switchTab = (tabId: string) => {
+			activeTabId = tabId;
 			tabBar.querySelectorAll('.pharos-tab').forEach(t => t.removeClass('active'));
 			tabBar.querySelector(`[data-tab="${tabId}"]`)?.addClass('active');
 			tabContent.empty();
@@ -105,6 +119,7 @@ export class CodeViewerView extends ItemView {
 		switchTab('files');
 	}
 
+	// ── 파일 탐색 탭 ──────────────────────
 	async renderFilesTab(container: HTMLElement) {
 		const toolbar = container.createDiv({ cls: 'pharos-toolbar' });
 		const branchSelect = toolbar.createEl('select');
@@ -120,13 +135,30 @@ export class CodeViewerView extends ItemView {
 			fileTree.empty();
 			fileTree.createDiv({ cls: 'pharos-loading', text: '불러오는 중...' });
 			const branch = branchSelect.value;
+			if (!branch) {
+				fileTree.empty();
+				fileTree.createDiv({ cls: 'pharos-loading', text: '❌ 브랜치를 선택해주세요.' });
+				return;
+			}
 			try {
 				this.recentPaths = await this.plugin.fetchRecentlyChangedFiles(branch);
 				const tree = await this.plugin.fetchFileTree(branch);
+				if (tree.length === 0) {
+					fileTree.empty();
+					fileTree.createDiv({ cls: 'pharos-loading', text: '📂 파일이 없습니다.' });
+					return;
+				}
 				this.renderFileTree(fileTree, tree, codePanel, branchSelect);
-			} catch (e) {
+			} catch (e: any) {
 				fileTree.empty();
-				fileTree.createDiv({ cls: 'pharos-loading', text: '❌ 로드 실패. 토큰/레포 확인' });
+				const status = e?.message || '';
+				let msg = '❌ 로드 실패';
+				if (status.includes('401')) msg = '❌ 인증 실패 — GitHub 토큰을 확인하세요 (401)';
+				else if (status.includes('403')) msg = '❌ 접근 거부 — 토큰 권한 또는 private 레포 확인 (403)';
+				else if (status.includes('404')) msg = '❌ 레포/브랜치를 찾을 수 없음 — 설정을 확인하세요 (404)';
+				else if (status.includes('422')) msg = '❌ 브랜치명 오류 (422)';
+				else if (status) msg = `❌ 로드 실패: ${status}`;
+				fileTree.createDiv({ cls: 'pharos-loading', text: msg });
 			}
 		};
 
@@ -143,8 +175,16 @@ export class CodeViewerView extends ItemView {
 			const isPrivate = await this.plugin.isRepoPrivate();
 			if (isPrivate) toolbar.createSpan({ cls: 'pharos-private-badge', text: '🔒 private' });
 			await loadTree();
-		} catch {
-			branchSelect.createEl('option', { text: '로드 실패' });
+		} catch (e: any) {
+			const status = e?.message || '';
+			let msg = '브랜치 로드 실패';
+			if (status.includes('401')) msg = '인증 실패 (401) — 토큰 확인';
+			else if (status.includes('403')) msg = '접근 거부 (403) — 토큰/권한 확인';
+			else if (status.includes('404')) msg = '레포를 찾을 수 없음 (404) — 레포명 확인';
+			else if (status) msg = `실패: ${status}`;
+			branchSelect.createEl('option', { text: `❌ ${msg}` });
+			fileTree.empty();
+			fileTree.createDiv({ cls: 'pharos-loading', text: `❌ ${msg}` });
 		}
 	}
 
@@ -190,6 +230,7 @@ export class CodeViewerView extends ItemView {
 		return el;
 	}
 
+	// ── 팀원별 커밋 탭 ────────────────────
 	async renderMembersTab(container: HTMLElement) {
 		const toolbar = container.createDiv({ cls: 'pharos-toolbar' });
 		const rangeSelect = toolbar.createEl('select');
@@ -198,15 +239,19 @@ export class CodeViewerView extends ItemView {
 		const refreshBtn = toolbar.createEl('button', { text: '🔄' });
 
 		const body = container.createDiv({ cls: 'pharos-body' });
+
+		// 3단 레이아웃: 팀원 | 커밋 목록 | 변경파일 | 코드
 		const memberList = body.createDiv({ cls: 'pharos-member-list' });
 		const commitPanel = body.createDiv({ cls: 'pharos-commit-panel' });
 
+		// commitPanel 안에 커밋목록 + 우측 패널
 		const commitBody = commitPanel.createDiv({ cls: 'pharos-body' });
 		const commitList = commitBody.createDiv({ cls: 'pharos-commit-list' });
 		const rightPanel = commitBody.createDiv({ cls: 'pharos-body' });
 		const fileChangeList = rightPanel.createDiv({ cls: 'pharos-file-change-list' });
 		const codePanel = rightPanel.createDiv({ cls: 'pharos-code-panel' });
 
+		// 초기 플레이스홀더
 		const showPlaceholder = (panel: HTMLElement, icon: string, text: string) => {
 			panel.empty();
 			const ph = panel.createDiv({ cls: 'pharos-placeholder' });
@@ -328,6 +373,7 @@ export class CodeViewerView extends ItemView {
 				el.addEventListener('click', async () => {
 					fileChangeList.querySelectorAll('.pharos-file-change-item').forEach(e => e.removeClass('active'));
 					el.addClass('active');
+					// 커밋 시점의 코드를 가져옴 (sha 기준)
 					await this.loadCodeToPanel(file.filename, codePanel, sha);
 				});
 			});
@@ -364,6 +410,9 @@ export class CodeViewerView extends ItemView {
 	async onClose() { }
 }
 
+// ============================
+// 팀 커밋 현황 모달 (주간 탭)
+// ============================
 class TeamCommitModal extends Modal {
 	plugin: MyPlugin;
 	constructor(app: App, plugin: MyPlugin) { super(app); this.plugin = plugin; }
@@ -488,6 +537,9 @@ class TeamCommitModal extends Modal {
 	onClose() { this.contentEl.empty(); }
 }
 
+// ============================
+// 타입 / 유틸
+// ============================
 interface GithubTreeItem { path: string; type: 'blob' | 'tree'; sha: string; }
 interface CommitData { author: string; commits: number; avatar: string; }
 interface CommitItem { sha: string; message: string; date: string; }
@@ -503,6 +555,9 @@ function formatDate(iso: string): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+// ============================
+// 메인 플러그인
+// ============================
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
@@ -535,87 +590,71 @@ export default class MyPlugin extends Plugin {
 
 	async isRepoPrivate(): Promise<boolean> {
 		try {
-			const res = await requestUrl({
-				url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}`,
-				headers: this.githubHeaders()
-			});
-			return res.status === 200 ? res.json.private === true : false;
+			const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}`, { headers: this.githubHeaders() });
+			return res.ok ? (await res.json()).private === true : false;
 		} catch { return false; }
 	}
 
+	private getViewRepo(): string {
+		return this.settings.teamRepo || this.settings.repoName;
+	}
+
 	async fetchBranches() {
-		const res = await requestUrl({
-			url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/branches`,
-			headers: this.githubHeaders()
-		});
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		return res.json;
+		const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.getViewRepo()}/branches`, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		return res.json();
 	}
 
 	async fetchFileTree(branch: string): Promise<GithubTreeItem[]> {
-		const res = await requestUrl({
-			url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/git/trees/${branch}?recursive=1`,
-			headers: this.githubHeaders()
-		});
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		const data = res.json;
+		const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.getViewRepo()}/git/trees/${branch}?recursive=1`, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		const data = await res.json();
 		return (data.tree as GithubTreeItem[]).filter(i => i.type === 'blob' && !i.path.startsWith('.git'));
 	}
 
 	async fetchRecentlyChangedFiles(branch: string): Promise<Set<string>> {
-		try {
-			const res = await requestUrl({
-				url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/commits?sha=${branch}&per_page=5`,
-				headers: this.githubHeaders()
-			});
-			if (res.status !== 200) return new Set();
-			const commits = res.json;
-			const paths = new Set<string>();
-			for (const c of commits.slice(0, 3)) {
-				try {
-					const detailRes = await requestUrl({
-						url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/commits/${c.sha}`,
-						headers: this.githubHeaders()
-					});
-					detailRes.json.files?.forEach((f: { filename: string }) => paths.add(f.filename));
-				} catch { }
-			}
-			return paths;
-		} catch { return new Set(); }
+		const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.getViewRepo()}/commits?sha=${branch}&per_page=5`, { headers: this.githubHeaders() });
+		if (!res.ok) return new Set();
+		const commits = await res.json();
+		const paths = new Set<string>();
+		for (const c of commits.slice(0, 3)) {
+			try {
+				const detail = await (await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/commits/${c.sha}`, { headers: this.githubHeaders() })).json();
+				detail.files?.forEach((f: { filename: string }) => paths.add(f.filename));
+			} catch { }
+		}
+		return paths;
 	}
 
 	async fetchFileContent(path: string, ref: string) {
-		const res = await requestUrl({
-			url: `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/contents/${path}?ref=${ref}`,
-			headers: this.githubHeaders()
-		});
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		const data = res.json;
+		const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${this.getViewRepo()}/contents/${path}?ref=${ref}`, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		const data = await res.json();
 		const decoded = decodeURIComponent(atob(data.content.replace(/\s/g, '')).split('').map((c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
 		return { content: decoded };
 	}
 
+	// 특정 작성자의 커밋 목록
 	async fetchCommitsByAuthor(author: string, since: string | null): Promise<CommitItem[]> {
 		const target = this.settings.teamRepo || this.settings.repoName;
 		let url = `https://api.github.com/repos/${this.settings.userName}/${target}/commits?author=${author}&per_page=50`;
 		if (since) url += `&since=${since}`;
-		const res = await requestUrl({ url, headers: this.githubHeaders() });
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		return res.json.map((c: any) => ({
+		const res = await fetch(url, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		const commits = await res.json();
+		return commits.map((c: any) => ({
 			sha: c.sha,
-			message: c.commit.message.split('\n')[0],
+			message: c.commit.message.split('\n')[0], // 첫 줄만
 			date: c.commit.author.date,
 		}));
 	}
 
+	// 특정 커밋의 변경 파일 목록
 	async fetchCommitFiles(sha: string): Promise<CommitFile[]> {
 		const target = this.settings.teamRepo || this.settings.repoName;
-		const res = await requestUrl({
-			url: `https://api.github.com/repos/${this.settings.userName}/${target}/commits/${sha}`,
-			headers: this.githubHeaders()
-		});
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		const data = res.json;
+		const res = await fetch(`https://api.github.com/repos/${this.settings.userName}/${target}/commits/${sha}`, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		const data = await res.json();
 		return (data.files || []).map((f: any) => ({
 			filename: f.filename,
 			additions: f.additions,
@@ -628,9 +667,9 @@ export default class MyPlugin extends Plugin {
 		let url = `https://api.github.com/repos/${this.settings.userName}/${target}/commits?per_page=100`;
 		if (since) url += `&since=${since}`;
 		if (until) url += `&until=${until}`;
-		const res = await requestUrl({ url, headers: this.githubHeaders() });
-		if (res.status !== 200) throw new Error(`${res.status}`);
-		const commits = res.json;
+		const res = await fetch(url, { headers: this.githubHeaders() });
+		if (!res.ok) throw new Error(`${res.status}`);
+		const commits = await res.json();
 		const map: Record<string, { commits: number; avatar: string }> = {};
 		commits.forEach((c: any) => {
 			const author = c.author?.login || c.commit?.author?.name || 'unknown';
@@ -644,23 +683,15 @@ export default class MyPlugin extends Plugin {
 	async uploadToGithub(fileName: string, content: string) {
 		const url = `https://api.github.com/repos/${this.settings.userName}/${this.settings.repoName}/contents/${fileName}`;
 		try {
-			const check = await requestUrl({ url, headers: this.githubHeaders() });
-			const sha = check.status === 200 ? check.json.sha : null;
-			const res = await requestUrl({
-				url,
-				method: 'PUT',
-				headers: { ...this.githubHeaders(), 'Content-Type': 'application/json' },
-				body: JSON.stringify({ message: `Update ${fileName} via Pharos`, content: btoa(unescape(encodeURIComponent(content))), sha })
-			});
-			if (res.status === 200 || res.status === 201) new Notice('업로드 성공! 🎉'); else new Notice('업로드 실패');
+			const check = await fetch(url, { headers: this.githubHeaders() });
+			const sha = check.ok ? (await check.json()).sha : null;
+			const res = await fetch(url, { method: 'PUT', headers: { ...this.githubHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `Update ${fileName} via Pharos`, content: btoa(unescape(encodeURIComponent(content))), sha }) });
+			if (res.ok) new Notice('업로드 성공! 🎉'); else new Notice('업로드 실패');
 		} catch { new Notice('네트워크 오류'); }
 	}
 
 	private githubHeaders(): Record<string, string> {
-		const h: Record<string, string> = {
-			'Accept': 'application/vnd.github+json',
-			'X-GitHub-Api-Version': '2022-11-28'
-		};
+		const h: Record<string, string> = { 'Accept': 'application/vnd.github+json' };
 		if (this.settings.ghToken) h['Authorization'] = `Bearer ${this.settings.ghToken}`;
 		return h;
 	}
