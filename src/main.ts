@@ -1,4 +1,3 @@
-// main.ts
 import { App, ItemView, MarkdownView, Menu, Modal, Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian';
 import { DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab } from "./settings";
 
@@ -38,8 +37,6 @@ export class CodeViewerView extends ItemView {
 			.pharos-toolbar button { font-size:12px; padding:3px 8px; border-radius:4px; cursor:pointer; background:var(--interactive-accent); color:var(--text-on-accent); border:none; }
 			.pharos-body { display:flex; flex:1; overflow:hidden; }
 			.pharos-tab-content { display:flex; flex:1; overflow:hidden; flex-direction:column; }
-
-			/* 파일 트리 탭 */
 			.pharos-file-tree { width:200px; min-width:140px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-file-tree-header { font-size:11px; font-weight:600; color:var(--text-muted); padding:8px 10px 4px; text-transform:uppercase; }
 			.pharos-file-item { display:flex; align-items:center; gap:5px; padding:4px 10px; font-size:12px; cursor:pointer; border-left:2px solid transparent; }
@@ -47,15 +44,11 @@ export class CodeViewerView extends ItemView {
 			.pharos-file-item.recent { border-left-color:#f59e0b; }
 			.pharos-recent-badge { font-size:9px; background:#f59e0b; color:white; padding:1px 4px; border-radius:3px; margin-left:4px; }
 			.pharos-private-badge { font-size:9px; background:#6366f1; color:white; padding:1px 5px; border-radius:3px; margin-left:6px; }
-
-			/* 코드 패널 */
 			.pharos-code-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 			.pharos-code-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; background:var(--background-secondary); border-bottom:1px solid var(--background-modifier-border); font-size:12px; flex-shrink:0; }
 			.pharos-code-scroll { flex:1; overflow:auto; background:var(--background-primary); }
 			.pharos-code-scroll pre { margin:0; padding:16px; font-size:12px; line-height:1.6; font-family:var(--font-monospace); white-space:pre; }
 			.pharos-copy-btn { font-size:11px; padding:2px 8px; border-radius:3px; cursor:pointer; background:var(--background-modifier-border); color:var(--text-normal); border:none; }
-
-			/* 팀원 탭 */
 			.pharos-member-list { width:200px; min-width:160px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-member-item { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; border-left:3px solid transparent; font-size:13px; }
 			.pharos-member-item:hover { background:var(--background-modifier-hover); }
@@ -64,7 +57,6 @@ export class CodeViewerView extends ItemView {
 			.pharos-member-info { flex:1; min-width:0; }
 			.pharos-member-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 			.pharos-member-commits { font-size:10px; color:var(--text-muted); }
-
 			.pharos-commit-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 			.pharos-commit-list { width:260px; min-width:200px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; flex-shrink:0; }
 			.pharos-commit-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--background-modifier-border); border-left:3px solid transparent; }
@@ -73,7 +65,6 @@ export class CodeViewerView extends ItemView {
 			.pharos-commit-msg { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 			.pharos-commit-date { font-size:10px; color:var(--text-muted); margin-top:2px; }
 			.pharos-commit-sha { font-size:10px; color:var(--text-muted); font-family:var(--font-monospace); }
-
 			.pharos-file-change-list { width:200px; min-width:160px; border-right:1px solid var(--background-modifier-border); overflow-y:auto; background:var(--background-secondary); flex-shrink:0; }
 			.pharos-file-change-item { padding:6px 10px; cursor:pointer; border-left:3px solid transparent; font-size:11px; }
 			.pharos-file-change-item:hover { background:var(--background-modifier-hover); }
@@ -82,7 +73,6 @@ export class CodeViewerView extends ItemView {
 			.pharos-file-change-stat { font-size:10px; color:var(--text-muted); }
 			.pharos-stat-add { color:#22c55e; }
 			.pharos-stat-del { color:#ef4444; }
-
 			.pharos-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); gap:8px; }
 			.pharos-placeholder .ph-icon { font-size:28px; }
 			.pharos-placeholder .ph-text { font-size:12px; }
@@ -98,10 +88,7 @@ export class CodeViewerView extends ItemView {
 			{ id: 'members', label: '👥 팀원별 커밋' },
 		];
 
-		let activeTabId = 'files';
-
 		const switchTab = (tabId: string) => {
-			activeTabId = tabId;
 			tabBar.querySelectorAll('.pharos-tab').forEach(t => t.removeClass('active'));
 			tabBar.querySelector(`[data-tab="${tabId}"]`)?.addClass('active');
 			tabContent.empty();
@@ -377,9 +364,6 @@ export class CodeViewerView extends ItemView {
 	async onClose() { }
 }
 
-// ============================
-// 팀 커밋 현황 모달
-// ============================
 class TeamCommitModal extends Modal {
 	plugin: MyPlugin;
 	constructor(app: App, plugin: MyPlugin) { super(app); this.plugin = plugin; }
@@ -504,9 +488,6 @@ class TeamCommitModal extends Modal {
 	onClose() { this.contentEl.empty(); }
 }
 
-// ============================
-// 타입 / 유틸
-// ============================
 interface GithubTreeItem { path: string; type: 'blob' | 'tree'; sha: string; }
 interface CommitData { author: string; commits: number; avatar: string; }
 interface CommitItem { sha: string; message: string; date: string; }
@@ -522,9 +503,6 @@ function formatDate(iso: string): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-// ============================
-// 메인 플러그인
-// ============================
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
